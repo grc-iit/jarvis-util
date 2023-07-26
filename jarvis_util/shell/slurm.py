@@ -20,7 +20,7 @@ class SlurmInfo:
         self.partition = partition
         self.exclusive = exclusive
 
-        self.nNodes = nnodes
+        self.nnodes = nnodes
         self.node_list = node_list
 
         if self.node_list:
