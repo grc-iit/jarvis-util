@@ -87,6 +87,8 @@ class Slurm:
         self.command = base_cmd
         node = Exec(base_cmd, exec_info)
         if node.stdout:
+            print(node.stdout.items())
+            print(node.stderr.items())
             self.job_id = re.findall('\d+', node.stdout['localhost'])[0]
             print(f"Resources allocated with job ID {self.job_id}")
         else:
