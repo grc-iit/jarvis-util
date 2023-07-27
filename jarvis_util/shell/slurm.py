@@ -93,7 +93,7 @@ class Slurm:
             exec_info = ExecInfo(collect_output=True)
         else:
             exec_info.collect_output = True
-        node = Exec(f'scontrol show hostname', exec_info)
+        node = Exec(f'scontrol show job {self.job_id} | grep " NodeList"', exec_info)
         print(node.stdout.items)
         print(node.stderr.items)
         self.nodes = node.stdout['localhost']
