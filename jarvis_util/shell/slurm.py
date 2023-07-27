@@ -86,14 +86,7 @@ class Slurm:
             base_cmd += f'--exclusive '
         self.command = base_cmd
         node = Exec(base_cmd, exec_info)
-        if node.stdout:
-            print(node.stdout.items())
-            print(node.stderr.items())
-            self.job_id = re.findall('\d+', node.stdout['localhost'])[0]
-            print(f"Resources allocated with job ID {self.job_id}")
-        else:
-            print(f"Failed to allocate resources: {node.stderr}")
-            return None
+        self.job_id = re.findall('\d+', node.stderr['localhost'])[0]
 
     def get_nodes(self, exec_info=None) -> list:
         if exec_info is None:
