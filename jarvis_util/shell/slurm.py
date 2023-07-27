@@ -87,7 +87,7 @@ class Slurm:
         self.command = base_cmd
         node = Exec(base_cmd, exec_info)
         if node.stdout:
-            self.job_id = re.search('Allocated node job (\d+)', node.stdout).group(1)
+            self.job_id = re.search('Granted job allocation (\d+)', node.stdout).group(1)
             print(f"Resources allocated with job ID {job_id}")
         else:
             print(f"Failed to allocate resources: {node.stderr}")
