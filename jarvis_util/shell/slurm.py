@@ -62,6 +62,7 @@ class Slurm:
         self.nodes = ""
         self.slurm_info = slurm_info
         self.hostfile = None
+        self.job_id = 0
         if shutil.which('salloc') is None:
             raise EnvironmentError('salloc not found on the system.')
 
@@ -69,8 +70,12 @@ class Slurm:
         self.exit()
 
     def allocate(self, exec_info=None):
-        # salloc -n 2 -p compute --exclusive
-        base_cmd = "salloc "
+        if exec_info is None:
+            exec_info = ExecInfo(collect_output=True)
+        else:
+            exec_info.collect_output = True
+
+        base_cmd = "salloc --no-shell "
         if self.slurm_info.nnodes:
             base_cmd += f'-n {self.slurm_info.nnodes} '
         if self.slurm_info.node_list:
@@ -80,7 +85,13 @@ class Slurm:
         if self.slurm_info.exclusive:
             base_cmd += f'--exclusive '
         self.command = base_cmd
-        Exec(base_cmd, exec_info)
+        node = Exec(base_cmd, exec_info)
+        if node.stdout:
+            self.job_id = re.search('Allocated node job (\d+)', node.stdout).group(1)
+            print(f"Resources allocated with job ID {job_id}")
+        else:
+            print(f"Failed to allocate resources: {node.stderr}")
+            return None
 
     def get_nodes(self, exec_info=None) -> list:
         if exec_info is None:
@@ -112,4 +123,4 @@ class Slurm:
         return self.hostfile
 
     def exit(self, exec_info=None):
-        Exec(f'exit', exec_info)
+        Exec(f'scancel {self.job_id}', exec_info)

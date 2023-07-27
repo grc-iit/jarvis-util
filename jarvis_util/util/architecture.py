@@ -117,3 +117,6 @@ class Architecture:
 # ]
 # arch = Architecture(services)
 # arch.schedule_services()
+# hostfile = arch.hostfile("Application")
+# exec_info = MpiExecInfo(nprocs=num_processes, ppn=2, hostfile=hostfile, cwd=self.INSTALL_PATH)
+# simulation = MpiExec(f"./adios2-gray-scott settings-files.json", exec_info)
