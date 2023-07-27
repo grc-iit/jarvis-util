@@ -94,6 +94,8 @@ class Slurm:
         else:
             exec_info.collect_output = True
         node = Exec(f'scontrol show hostname', exec_info)
+        print(node.stdout.items)
+        print(node.stderr.items)
         self.nodes = node.stdout['localhost']
         return self.nodes
 
