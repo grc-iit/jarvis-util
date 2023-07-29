@@ -9,6 +9,7 @@ class Service:
         self.color_distribution = self.parse_distribution(color_distribution)
         self.allocated_nodes = []
         self.hostfile = None
+        self.slurm = None
         self.validate()
 
     @staticmethod
@@ -26,10 +27,6 @@ class Service:
 
     def add_nodes(self, nodes: list):
         self.allocated_nodes.extend(nodes)
-
-    def add_hostfile(self, nodes: list):
-        self.add_nodes(nodes)
-        self.hostfile = Hostfile(all_hosts=self.allocated_nodes)
 
     def generate_hostfile(self):
         self.hostfile = Hostfile(all_hosts=self.allocated_nodes)
@@ -58,6 +55,12 @@ class Architecture:
         self.__init__()
         self.add_service(services)
 
+    def __enter__(self):
+        self.schedule_services()
+
+    def __exit__(self):
+        self.slurm.exit()
+
     def add_service(self, service: Service):
         if service.name in self.services:
             raise ValueError("Service already defined {0}".format(service.name))
@@ -85,9 +88,10 @@ class Architecture:
 
     def schedule_services(self):
         total_nodes = self.get_num_nodes_needed()
-        slurm = Slurm(SlurmInfo(nnodes=total_nodes))
-        slurm.allocate()
-        node_list = slurm.get_nodes()
+        self.slurm = Slurm(SlurmInfo(nnodes=total_nodes))
+        self.slurm.allocate()
+        node_list = self.slurm.get_nodes()
+
         if len(node_list) != total_nodes:
             raise EnvironmentError("Slurm could not reserve enough nodes")
 
@@ -106,8 +110,6 @@ class Architecture:
                 service_nodes = pool_nodes[:num_nodes]
                 # Update service with nodes
                 service.add_nodes(service_nodes)
-
-        for service in self.services.values():
             service.generate_hostfile()
 
 # services = [

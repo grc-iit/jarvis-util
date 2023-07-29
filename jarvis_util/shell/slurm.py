@@ -70,7 +70,12 @@ class Slurm:
     def __exit__(self):
         self.exit()
 
+    def __enter__(self):
+        self.allocate()
+
     def allocate(self, exec_info=None):
+        if self.allocated:
+            return
         if exec_info is None:
             exec_info = ExecInfo(collect_output=True)
         else:
@@ -93,14 +98,15 @@ class Slurm:
     def get_nodes(self, exec_info=None) -> list:
         if self.allocated is not True:
             self.allocate(exec_info)
-        if exec_info is None:
-            exec_info = ExecInfo(collect_output=True, hide_output=True)
-        else:
-            exec_info.collect_output = True
-            exec_info.hide_output = True
-        node = Exec(f'scontrol show job {self.job_id} | grep " NodeList"', exec_info)
-        self.nodes = node.stdout['localhost'].split("=")[1]
-        self.hostfile = Hostfile(text=self.nodes)
+        if not self.nodes:
+            if exec_info is None:
+                exec_info = ExecInfo(collect_output=True, hide_output=True)
+            else:
+                exec_info.collect_output = True
+                exec_info.hide_output = True
+            node = Exec(f'scontrol show job {self.job_id} | grep " NodeList"', exec_info)
+            self.nodes = node.stdout['localhost'].split("=")[1]
+            self.hostfile = Hostfile(text=self.nodes)
         return self.nodes
 
     def get_node_list(self):
@@ -109,6 +115,8 @@ class Slurm:
         return self.nodes.splitlines()
 
     def get_hostfile(self):
+        if not self.nodes:
+            self.get_nodes()
         return self.hostfile
 
     def get_node_counts(self):
