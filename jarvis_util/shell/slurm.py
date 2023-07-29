@@ -90,12 +90,13 @@ class Slurm:
 
     def get_nodes(self, exec_info=None) -> list:
         if exec_info is None:
-            exec_info = ExecInfo(collect_output=True)
+            exec_info = ExecInfo(collect_output=True, hide_output=True)
         else:
             exec_info.collect_output = True
+            exec_info.hide_output = True
         node = Exec(f'scontrol show job {self.job_id} | grep " NodeList"', exec_info)
         self.nodes = node.stdout['localhost'].split("=")[1]
-        self.hostfile = Hostfile(self.nodes)
+        self.hostfile = Hostfile(text=self.nodes)
         return self.nodes
 
     def get_node_list(self):
