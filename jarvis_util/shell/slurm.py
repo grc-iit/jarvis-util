@@ -123,3 +123,4 @@ class Slurm:
 
     def exit(self, exec_info=None):
         Exec(f'scancel {self.job_id}', exec_info)
+        print(f"Job {self.job_id} exited")
