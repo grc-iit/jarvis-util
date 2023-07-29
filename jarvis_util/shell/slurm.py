@@ -63,6 +63,7 @@ class Slurm:
         self.slurm_info = slurm_info
         self.hostfile = None
         self.job_id = 0
+        self.allocated = False
         if shutil.which('salloc') is None:
             raise EnvironmentError('salloc not found on the system.')
 
@@ -87,8 +88,11 @@ class Slurm:
         self.command = base_cmd
         node = Exec(base_cmd, exec_info)
         self.job_id = re.findall('\d+', node.stderr['localhost'])[0]
+        self.allocated = True
 
     def get_nodes(self, exec_info=None) -> list:
+        if self.allocated is not True:
+            self.allocate(exec_info)
         if exec_info is None:
             exec_info = ExecInfo(collect_output=True, hide_output=True)
         else:
@@ -115,13 +119,7 @@ class Slurm:
     def get_command(self):
         return self.command
 
-    def get_hostfile(self):
-        if self.hostfile is None:
-            if not self.nodes:
-                self.get_nodes()
-            self.hostfile = Hostfile(all_hosts=self.get_node_list())
-        return self.hostfile
-
     def exit(self, exec_info=None):
         Exec(f'scancel {self.job_id}', exec_info)
+        self.allocated = False
         print(f"Job {self.job_id} exited")
