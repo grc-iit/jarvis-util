@@ -67,7 +67,7 @@ class Slurm:
         if shutil.which('salloc') is None:
             raise EnvironmentError('salloc not found on the system.')
 
-    def __del__(self):
+    def __exit__(self):
         self.exit()
 
     def allocate(self, exec_info=None):
