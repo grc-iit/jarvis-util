@@ -94,15 +94,17 @@ class Slurm:
         else:
             exec_info.collect_output = True
         node = Exec(f'scontrol show job {self.job_id} | grep " NodeList"', exec_info)
-        print(node.stdout.items)
-        print(node.stderr.items)
-        self.nodes = node.stdout['localhost']
+        self.nodes = node.stdout['localhost'].split("=")[1]
+        self.hostfile = Hostfile(self.nodes)
         return self.nodes
 
     def get_node_list(self):
         if not self.nodes:
             self.get_nodes()
         return self.nodes.splitlines()
+
+    def get_hostfile(self):
+        return self.hostfile
 
     def get_node_counts(self):
         if not self.nodes:
