@@ -176,6 +176,68 @@ class ArgParse(ABC):
         self._default_arg_list_params(self.menu['pos_opts'])
         self._default_arg_list_params(list(self.menu['kw_opts'].values()))
 
+    def generate_bash_autocomplete(self, bin_name):
+        bash_script = "#!/bin/bash\n"
+        bash_script += f"_{{bin_name}}_completion() {{\n"
+        bash_script += "    local cur cmd_line opts\n"
+        bash_script += "    COMPREPLY=()\n"
+        bash_script += "    cur=\"${COMP_WORDS[COMP_CWORD]}\"\n"
+        bash_script += f"    cmd_line=\"${{COMP_WORDS[*]:1:$COMP_CWORD-1}}\"  # Command line without '{{bin_name}}'\n"
+
+        # Dictionary to hold command levels and their arguments
+        command_levels = {}
+        final_commands = {}
+
+        # Populate command_levels with subcommands and final_commands with full commands
+        for menu in self.menus:
+            full_command = ' '.join(menu['name'])
+            parent_command = ' '.join(menu['name'][:-1])  # Parent command
+            sub_command = menu['name'][-1]  # Sub-command
+            if parent_command not in command_levels:
+                command_levels[parent_command] = []
+            command_levels[parent_command].append(sub_command)
+
+            # Check if this is a final command (no further subcommands)
+            if not any(other_menu.startswith(full_command + ' ') for other_menu in command_levels):
+                final_commands[full_command] = True
+
+        # Sort the command levels by length (longest first)
+        sorted_final_commands = sorted(final_commands, key=len, reverse=True)
+
+        # Generate completion options for final level commands
+        for final_command in sorted_final_commands:
+            bash_script += f"    if [[ \"$cmd_line\" == '{final_command}' ]]; then\n"
+            # Extract only the argument names from the help output
+            bash_script += f"        opts=$({bin_name} {final_command} -h | awk 'NR > 7 {{print $1}}')\n"
+            bash_script += "        COMPREPLY=( $(compgen -W \"$opts\" -- $cur) )\n"
+            bash_script += "        return 0  # Stop further processing\n"
+            bash_script += "    fi\n"
+
+        # Generate completion options for sub-level and top-level commands
+        for parent_command, sub_commands in command_levels.items():
+            if parent_command:
+                # For sub-level commands
+                bash_script += f"    if [[ \"$cmd_line\" == '{parent_command}' ]]; then\n"
+                bash_script += "        opts=\"" + " ".join(sub_commands) + "\"\n"
+                bash_script += "        COMPREPLY=( $(compgen -W \"$opts\" -- $cur) )\n"
+                bash_script += "        return 0\n"
+                bash_script += "    fi\n"
+            else:
+                # For top-level commands
+                bash_script += "    if [[ \"$cmd_line\" == '' ]]; then\n"
+                bash_script += "        opts=\"" + " ".join(sub_commands) + "\"\n"
+                bash_script += "        COMPREPLY=( $(compgen -W \"$opts\" -- $cur) )\n"
+                bash_script += "        return 0\n"
+                bash_script += "    fi\n"
+
+        bash_script += "    return 0\n"
+        bash_script += "}\n"
+        bash_script += f"complete -F _{bin_name}_completion {bin_name}\n"
+
+        # Write to file
+        with open(f'{bin_name}_autocomplete.sh', 'w') as file:
+            file.write(bash_script)
+        print(f"Bash completion script generated: {bin_name}_autocomplete.sh")
     def _parse(self):
         """
         Parse the CLI arguments.
@@ -470,6 +532,13 @@ class ArgParse(ABC):
             table.append(
                 [arg['name'], default, self._get_type(arg), arg['msg']])
         print(tabulate(table, headers=headers))
+
+    def _get_arguments(self, menu_name):
+        names_from_pos_opts = [opt['name'] for opt in self.menu['pos_opts']]
+        names_from_kw_opts = [value['name'] for value in self.menu['kw_opts'].values()]
+
+        # Combining both lists
+        all_names = names_from_pos_opts + names_from_kw_opts
 
     def _get_type(self, arg):
         if arg['type'] == list:
